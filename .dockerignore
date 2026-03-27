@@ -1,0 +1,9 @@
+.git
+.gitignore
+.mypy_cache
+build/
+dist/
+pcm_spaghetti.egg-info/
+spaghetti.egg-info/
+__pycache__/
+*.pyc
