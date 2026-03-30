@@ -1,24 +1,103 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 import pytorch_lightning as pl
 import random
-import _modules as modules
-from _utils import init_spaghetti
+import penne._modules as modules
+from penne._utils import init_spaghetti, pre_processing_phikon
+from transformers import AutoModel
+from tqdm import tqdm
+import os
+from torch.utils.data import DataLoader
+from typing import Union
+from torch.utils.data import DataLoader
+import anndata as ad
 
-#todo: finish the inference class
-class Penne():
-    def __init__(self, spaghetti_model_path: str):
+class Penne(pl.LightningModule):
+    def __init__(self, spaghetti_model_path: str = "assets/spaghetti.ckpt",
+                penne_model_path: str = "assets/penne.ckpt",
+                gene_names: str = "assets/gene_names.txt",
+                num_genes: int = 18085, 
+                do_high_confidence_genes: bool = False,
+                high_confidence_genes: str = "assets/high_confidence_genes.txt",
+                feature_extractor: Union[tuple, None] = None,
+                bio_feature_size:int = 960, domain_feature_size:int = 64) -> None:
         """
-        Initialize the model
-        args:
-            spaghetti_model_path: str, the path to the SPAGHETTI model checkpoint
-        """
-        self.generator = init_spaghetti(spaghetti_model_path)
-        # set attributes
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = device
+        Initialize the PENNE model with a pre-trained SPAGHETTI model for inference.
 
+        Args:
+            spaghetti_model_path (str): The path to the pre-trained SPAGHETTI model checkpoint.
+            penne_model_path (str): The path to the pre-trained PENNE model checkpoint.
+            gene_names (str): The path to a file containing a list of gene names, one on each line. This needs to match the order of the gene expression values predicted by the model.
+            num_genes (int): The number of genes to predict. Default is 18085, the number used in the pre-trained model.
+            do_high_confidence_genes (bool): Whether to focus on high-confidence genes during inference. Defaults to False.
+            high_confidence_genes (str, optional): The path to a file containing a list of high-confidence gene names, one on each line. 
+                                                        If None, expression of all genes will be predicted. Defaults to None.
+            feature_extractor (tuple, optional): A tuple of (image_processor, extractor) for feature extraction. 
+                                If None, it will use the default image processor for Phikon-v2 and the corresponding extractor.
+            bio_feature_size (int, optional): The size of the biological feature vector. Default is 960, the size used in the pre-trained model.
+            domain_feature_size (int, optional): The size of the domain feature vector. Default is 64, the size used in the pre-trained model.
+        """
+        converter = init_spaghetti(spaghetti_model_path)
+        if feature_extractor is None:
+            extractor = AutoModel.from_pretrained("owkin/phikon-v2").eval()
+            image_processor = pre_processing_phikon()
+            feature_extractor = (image_processor, extractor)
+        self.model = TrainPenne.load_from_checkpoint(penne_model_path, 
+                                                num_genes=num_genes, converter=converter, feature_extractor=feature_extractor, 
+                                                bio_feature_size=bio_feature_size, domain_feature_size=domain_feature_size)
+        self.model.freeze()
+        self.model.eval()
+        # prepare gene names
+        with open(gene_names, "r") as f:
+            self.gene_names = [line.strip() for line in f]
+        # prepare high confidence genes
+        if do_high_confidence_genes:
+            if high_confidence_genes is None:
+                raise Warning("High confidence genes list must be provided if do_high_confidence_genes is True. Predicting all genes instead.")
+            else:
+                try:
+                    with open(high_confidence_genes, "r") as f:
+                        high_confidence_genes_L = [line.strip() for line in f]
+                    self.high_confidence_genes = [gene for gene in high_confidence_genes_L if gene in self.gene_names]
+                except FileNotFoundError:
+                    raise Warning("High confidence genes file not found. Predicting all genes instead.")
+        else:
+            self.high_confidence_genes = None
+        assert len(self.gene_names) == num_genes, "The number of gene names must match the number of genes predicted by the model."
+
+    def forward(self, loader: DataLoader, save_path: Union[str, None] = None) -> ad.AnnData:
+        """
+        Perform inference on PCM image(s) and optionally save the predicted gene expression values.
+
+        Args:
+            loader (DataLoader): A DataLoader that provides batches of preprocessed PCM images as tensors.
+            save_path (str, optional): If provided, the path to save the predicted gene expression values as an AnnData object. Defaults to None.
+
+        Returns:
+            anndata.AnnData: An AnnData object containing the predicted gene expression values.
+        """
+        if save_path:
+            os.makedirs(save_path, exist_ok=True)
+        predicted_expression = []
+        predicted_f_names = []
+        with torch.no_grad():
+            for image, name in tqdm(loader):
+                image = image.to(self.model.device)
+                pred = self.model(image, if_convert=True).cpu().numpy() # (1, num_genes)
+                predicted_expression.append(pred)
+                predicted_f_names.append(name)
+        predicted_expression = np.concatenate(predicted_expression, axis=0) # (num_samples, num_genes)
+        ad_exp = ad.AnnData(X=predicted_expression, 
+                            obs={"image_name": predicted_f_names}, 
+                            var={"gene_name": self.gene_names})
+        if self.high_confidence_genes:
+            # subset the ad_exp to only include the high confidence genes
+            ad_exp = ad_exp[:, self.high_confidence_genes]
+        if save_path is not None:
+            ad_exp.write(os.path.join(save_path, "predicted_expression.h5ad"))
+        return ad_exp
 
 class TrainPenne(pl.LightningModule):
     def __init__(self, num_genes, 

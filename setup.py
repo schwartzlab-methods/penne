@@ -1,9 +1,8 @@
 from setuptools import setup, find_packages
 
-
 setup(
-    name="pcm-penne",  
-    version="1.2.2",  
+    name="penne",  
+    version="1.0.0", 
     author="Richard (Zhi Fei) Dong, Chris McIntosh, Gregory W. Schwartz",
     author_email="gregory.schwartz@uhn.ca",
     description="A PyTorch implementation of the PENNE model for inferring gene expression from phase-contrast microscopy images",
@@ -30,7 +29,7 @@ setup(
         "scikit-image>=0.18.3",
         "pytorch-lightning>=2.3.3",
         "tqdm>=4.66.4",
-        "scanpy>=1.10.1",
         "anndata>=0.10.7",
+        "transformers>=4.40.2",
     ],
 )
