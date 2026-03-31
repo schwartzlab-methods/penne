@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="penne",  
+    name="pcm-penne",  
     version="1.0.0", 
     author="Richard (Zhi Fei) Dong, Chris McIntosh, Gregory W. Schwartz",
     author_email="gregory.schwartz@uhn.ca",
