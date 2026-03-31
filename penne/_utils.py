@@ -2,6 +2,7 @@ from penne._modules import SpaghettiGenerator
 import torch
 from torchvision.transforms import v2
 from torch.nn import functional as F
+import os
 
 def init_spaghetti(model_path: str) -> torch.nn.Module:
     '''
@@ -62,3 +63,23 @@ def pre_processing_phikon(model=None):
             v2.Normalize(mean=IMAGE_MEAN, std=IMAGE_STD),     # Normalize
         ])
         return lambda batch: torch.stack([transform(x) for x in batch])
+
+
+def download_asset_from_github(asset_name: str, save_path: str = "~/.cache/penne/") -> None:
+    '''Download an asset from the penne GitHub repository.
+
+    Args:
+        asset_name (str): The name of the asset to download (e.g., "spaghetti.ckpt").
+        save_path (str): The local path to save the downloaded asset.
+    '''
+    import requests
+    f_save_path = os.path.join(save_path, asset_name)
+    os.makedirs(save_path, exist_ok=True)
+    url = f"https://raw.githubusercontent.com/schwartzlab-methods/penne/main/penne/assets/{asset_name}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(f_save_path, "wb") as f:
+            f.write(response.content)
+        print(f"Downloaded {asset_name} to {f_save_path}")
+    else:
+        raise Exception(f"Failed to download {asset_name} from GitHub. Status code: {response.status_code}")

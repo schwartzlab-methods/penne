@@ -5,7 +5,7 @@ import numpy as np
 import pytorch_lightning as pl
 import random
 import penne._modules as modules
-from penne._utils import init_spaghetti, pre_processing_phikon
+from penne._utils import init_spaghetti, pre_processing_phikon, download_asset_from_github
 from transformers import AutoModel
 from tqdm import tqdm
 import os
@@ -13,14 +13,17 @@ from torch.utils.data import DataLoader
 from typing import Union
 from torch.utils.data import DataLoader
 import anndata as ad
+from penne._configs import *
+from typing import Tuple, Union
+from pathlib import Path
 
 class Penne(pl.LightningModule):
-    def __init__(self, spaghetti_model_path: str = "assets/spaghetti.ckpt",
-                penne_model_path: str = "assets/penne.ckpt",
-                gene_names: str = "assets/gene_names.txt",
+    def __init__(self, spaghetti_model_path: Union[str, Path, None] = None,
+                penne_model_path: Union[str, Path, None] = None,
+                gene_names: Union[str, Path, None] = None,
                 num_genes: int = 18085, 
                 do_high_confidence_genes: bool = False,
-                high_confidence_genes: str = "assets/high_confidence_genes.txt",
+                high_confidence_genes: Union[str, Path, None] = None,
                 feature_extractor: Union[tuple, None] = None,
                 bio_feature_size:int = 960, domain_feature_size:int = 64) -> None:
         """
@@ -39,11 +42,36 @@ class Penne(pl.LightningModule):
             bio_feature_size (int, optional): The size of the biological feature vector. Default is 960, the size used in the pre-trained model.
             domain_feature_size (int, optional): The size of the domain feature vector. Default is 64, the size used in the pre-trained model.
         """
+        super(Penne, self).__init__()
+        # download files if not found locally
+        if spaghetti_model_path is None:
+            spaghetti_model_path = SPAGHETTI_MODEL_DIR
+            if not SPAGHETTI_MODEL_DIR.exists():
+                print(f"SPAGHETTI model not found at {SPAGHETTI_MODEL_DIR}. Downloading from GitHub...")
+                download_asset_from_github("spaghetti.ckpt", ASSET_DIR)
+        if penne_model_path is None:
+            penne_model_path = PENNE_MODEL_DIR
+            if not PENNE_MODEL_DIR.exists():
+                print(f"PENNE model not found at {PENNE_MODEL_DIR}. Downloading from GitHub...")
+                download_asset_from_github("penne.ckpt", ASSET_DIR)
+        if gene_names is None:
+            gene_names = GENE_NAMES_FILE
+            if not GENE_NAMES_FILE.exists():
+                print(f"Gene names file not found at {GENE_NAMES_FILE}. Downloading from GitHub...")
+                download_asset_from_github("gene_names.txt", ASSET_DIR)
+            gene_names = GENE_NAMES_FILE
+        if do_high_confidence_genes and high_confidence_genes is None:
+            high_confidence_genes = HIGH_CONFIDENCE_GENES_FILE
+            if not HIGH_CONFIDENCE_GENES_FILE.exists():
+                print(f"High confidence genes file not found at {HIGH_CONFIDENCE_GENES_FILE}. Downloading from GitHub...")
+                download_asset_from_github("high_confidence_genes.txt", ASSET_DIR)
+            high_confidence_genes = HIGH_CONFIDENCE_GENES_FILE
         converter = init_spaghetti(spaghetti_model_path)
         if feature_extractor is None:
             extractor = AutoModel.from_pretrained("owkin/phikon-v2").eval()
             image_processor = pre_processing_phikon()
             feature_extractor = (image_processor, extractor)
+        
         self.model = TrainPenne.load_from_checkpoint(penne_model_path, 
                                                 num_genes=num_genes, converter=converter, feature_extractor=feature_extractor, 
                                                 bio_feature_size=bio_feature_size, domain_feature_size=domain_feature_size)
@@ -87,7 +115,7 @@ class Penne(pl.LightningModule):
                 image = image.to(self.model.device)
                 pred = self.model(image, if_convert=True).cpu().numpy() # (batch_size, num_genes)
                 predicted_expression.append(pred)
-                predicted_f_names.append(name.view(-1))
+                predicted_f_names.extend(list(name))
         predicted_expression = np.concatenate(predicted_expression, axis=0) # (num_samples, num_genes)
         ad_exp = ad.AnnData(X=predicted_expression, 
                             obs={"image_name": predicted_f_names}, 
@@ -116,7 +144,7 @@ class TrainPenne(pl.LightningModule):
                  lr=1e-3,
                  if_ortho=True,
                  convert_for_pcm=True,
-                 do_gmlp=True, across_cell=False):
+                 do_gmlp=True, across_cell=True):
         '''Gene expression prediction model for Visium HD data.
 
         Args:
@@ -149,7 +177,7 @@ class TrainPenne(pl.LightningModule):
             do_gmlp (bool, optional): 
                 Whether to use Gated MLP for prediction. Defaults to True.
             across_cell (bool, optional): 
-                Whether to use across-cell information. Defaults to False.
+                Whether to use across-cell information. Defaults to True.
             orthogonal_loss_weight (float, optional): 
                 Weight for orthogonal loss. Defaults to 0.0.
             cosine_weight (float, optional):

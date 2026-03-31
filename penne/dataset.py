@@ -40,7 +40,7 @@ class InferenceDataset(Dataset):
         image_path = self.images[idx]
         f_name = os.path.basename(image_path)
         image = Image.open(image_path).convert("RGB")
-        image_array = np.array(image, dtype=np.uint16)  # Convert to numpy array with uint16 dtype
+        image_array = np.array(image, dtype=np.int16)  # Convert to numpy array with int16 dtype
         image_tensor = self.transform(image_array)
         if image_tensor.max().item() > 1.0:
             image_tensor = image_tensor / 255.0  # Rescale to [0, 1]
