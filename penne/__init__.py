@@ -9,6 +9,7 @@ from penne.model import Penne, TrainPenne
 from penne.dataset import InferenceDataset, TrainingDataset
 from pathlib import Path
 from penne import _modules
+__version__ = "1.0.0"
 
 __all__ = [
     "init_spaghetti",
