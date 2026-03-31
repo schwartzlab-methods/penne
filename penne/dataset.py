@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 import torch
 from torch.utils.data import Dataset
 import os
@@ -7,14 +7,14 @@ from torchvision.transforms import v2
 from PIL import Image
 
 class InferenceDataset(Dataset):
-    def __init__(self, paths: list[str]):
+    def __init__(self, paths: Union[list[str], Tuple[str], str]):
         '''Initialize the LiveCell dataset for validation
 
         Args:
-            paths (list[str]): List of paths to the image directories.
+            paths (list[str]): List of paths or one path to the image directories.
         '''
         super(InferenceDataset, self).__init__()
-        self.paths = paths
+        self.paths = paths if isinstance(paths, (list, tuple)) else [paths]
         self.images: list[str] = []
         for path in self.paths:
             for file in os.listdir(path):
