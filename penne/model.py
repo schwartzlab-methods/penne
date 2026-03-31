@@ -85,9 +85,9 @@ class Penne(pl.LightningModule):
         with torch.no_grad():
             for image, name in tqdm(loader):
                 image = image.to(self.model.device)
-                pred = self.model(image, if_convert=True).cpu().numpy() # (1, num_genes)
+                pred = self.model(image, if_convert=True).cpu().numpy() # (batch_size, num_genes)
                 predicted_expression.append(pred)
-                predicted_f_names.append(name)
+                predicted_f_names.append(name.view(-1))
         predicted_expression = np.concatenate(predicted_expression, axis=0) # (num_samples, num_genes)
         ad_exp = ad.AnnData(X=predicted_expression, 
                             obs={"image_name": predicted_f_names}, 
@@ -338,11 +338,7 @@ class TrainPenne(pl.LightningModule):
                 x = self.converter(x)
             x_converted = self.image_processor(x)      
             x = self.feature_extractor(x_converted).last_hidden_state[:, 0, :].view(x.shape[0], -1)
-        # x = self.translator(x)
         if self.make_ortho:
-            # if if_convert:
-            #     x = self.feature_biology_translator_pcm(x)
-            # else:
             x = self.feature_translator(x)[:, :self.bio_feature_size]
         x = self.predictor(x)
         x = torch.clamp(x, min=0)
