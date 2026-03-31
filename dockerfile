@@ -35,8 +35,7 @@ COPY --from=builder /usr/src/app/dist/*.whl .
 RUN pip install --no-cache-dir *.whl
 
 # Copy the entrypoint script
-COPY --from=builder /usr/src/app/spaghetti/cli_inference.py .
-COPY --from=builder /usr/src/app/spaghetti_checkpoint.ckpt .
+COPY --from=builder /usr/src/app/penne/cli_inference.py .
 
 # Change ownership to the non-root user
 RUN chown -R appuser:appgroup /usr/src/app
