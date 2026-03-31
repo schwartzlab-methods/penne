@@ -19,7 +19,7 @@ pip install pcm-penne
 
 ### Installing Locally
 
-Alternatively, you may also install SPAGHETTI from the GitHub repository directly. To do that, first create a virtual Python environment and install SPAHETTI locally.
+Alternatively, you may also install PENNE from the GitHub repository directly. To do that, first create a virtual Python environment and install PENNE locally.
 
 ```bash
 virtualenv --no-download penne
@@ -29,7 +29,7 @@ cd penne
 pip install .
 ```
 
-## Inferences using SPAGHETTI
+## Inferences using PENNE
 
 An example workflow of how to use PENNE to infer gene expression from your phase-contrast microscopy images can be found at `./tutorials/inference.ipynb`. You may supply your own checkpoint files, but if none is supplied, PENNE will automatically download it from the official GitHub repository.
 
