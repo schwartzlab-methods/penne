@@ -1,6 +1,6 @@
-# PENNE - Phase-to-Expression Neural Network Estimator Documentation Documentations
+# PENNE - Phase-to-Expression Neural Network Estimator Documentation
 
-Documentations for classes and methods for PENNE. For installing details, see [README.md](README.md). For a tutorial on sample usage, see the directory at ```tutorials/```.
+Documentation of classes and methods for PENNE. For installing details, see [README.md](README.md). For a tutorial on sample usage, see the directory at ```tutorials/```.
 
 This package provides a PyTorch implementation for inferring gene expression from phase-contrast microscopy images.
 
