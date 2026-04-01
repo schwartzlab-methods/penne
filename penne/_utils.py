@@ -73,13 +73,37 @@ def download_asset_from_github(asset_name: str, save_path: str = "~/.cache/penne
         save_path (str): The local path to save the downloaded asset.
     '''
     import requests
-    f_save_path = os.path.join(save_path, asset_name)
-    os.makedirs(save_path, exist_ok=True)
+    save_dir = os.path.expanduser(save_path)
+    os.makedirs(save_dir, exist_ok=True)
+    f_save_path = os.path.join(save_dir, asset_name)
     url = f"https://raw.githubusercontent.com/schwartzlab-methods/penne/main/penne/assets/{asset_name}"
-    response = requests.get(url)
-    if response.status_code == 200:
+    try:
+        response = requests.get(url, stream=True, timeout=60)
+        response.raise_for_status()
+        total_written = 0
+        expected_length = response.headers.get("Content-Length")
         with open(f_save_path, "wb") as f:
-            f.write(response.content)
+            for chunk in response.iter_content(chunk_size=8192):
+                if not chunk:
+                    continue
+                f.write(chunk)
+                total_written += len(chunk)
+        if expected_length is not None and total_written != int(expected_length):
+            # Incomplete download; remove partial file and raise an error.
+            try:
+                os.remove(f_save_path)
+            except OSError:
+                pass
+            raise Exception(
+                f"Failed to download complete asset {asset_name} from GitHub. "
+                f"Expected {expected_length} bytes, got {total_written} bytes."
+            )
         print(f"Downloaded {asset_name} to {f_save_path}")
-    else:
-        raise Exception(f"Failed to download {asset_name} from GitHub. Status code: {response.status_code}")
+    except requests.RequestException as e:
+        # Clean up any partially written file on network or HTTP error.
+        if os.path.exists(f_save_path):
+            try:
+                os.remove(f_save_path)
+            except OSError:
+                pass
+        raise Exception(f"Failed to download {asset_name} from GitHub: {e}")
