@@ -20,6 +20,8 @@ class InferenceDataset(Dataset):
             for file in os.listdir(path):
                 if file.endswith((".png", ".jpg", ".jpeg", ".tiff")):
                     self.images.append(os.path.join(path, file))
+        # Ensure deterministic ordering of images across runs and filesystems
+        self.images.sort()
         self.transform = v2.Compose([
             v2.ToImage(),
             v2.ToDtype(torch.float32),
