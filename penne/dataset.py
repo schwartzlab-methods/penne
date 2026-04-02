@@ -169,14 +169,13 @@ class TrainingDataset(Dataset):
         '''Write attributes for the LIVECell dataset.
 
         Args:
-            livecell_dir (list[str]): List of paths to the LIVECell directories.
+            livecell_dir ([str]): List of paths to the LIVECell directories.
         '''
-        for path in livecell_dir:
-            all_cls = [x for x in os.listdir(path) if os.path.isdir(os.path.join(path, x))]
-            for cls in all_cls:
-                imgs = [os.path.join(root, img) for root, _, imgs in os.walk(os.path.join(path, cls)) for img in imgs]
-                self.livecell_path.extend(imgs)
-                self.livecell_classes.extend([cls]*len(imgs))
+        all_cls = [x for x in os.listdir(livecell_dir) if os.path.isdir(os.path.join(livecell_dir, x))]
+        for cls in all_cls:
+            imgs = [os.path.join(root, img) for root, _, imgs in os.walk(os.path.join(livecell_dir, cls)) for img in imgs]
+            self.livecell_path.extend(imgs)
+            self.livecell_classes.extend([cls]*len(imgs))
         # get the class to idx mapping
         self.livecell_class_to_idx = {cls: i for i, cls in enumerate(np.unique(self.livecell_classes).tolist())}
         self.livecell_targets = [self.livecell_class_to_idx[x] for x in self.livecell_classes] # targets are the class indices
