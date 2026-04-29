@@ -95,13 +95,14 @@ class Penne(pl.LightningModule):
             self.high_confidence_genes = None
         assert len(self.gene_names) == num_genes, "The number of gene names must match the number of genes predicted by the model."
 
-    def forward(self, loader: DataLoader, save_path: Union[str, None] = None) -> ad.AnnData:
+    def forward(self, loader: DataLoader, save_path: Union[str, None] = None, do_tqdm: bool = True) -> ad.AnnData:
         """
         Perform inference on PCM image(s) and optionally save the predicted gene expression values.
 
         Args:
-            loader (DataLoader): A DataLoader that provides batches of preprocessed PCM images as tensors.
+            loader (DataLoader): A DataLoader that provides batches of preprocessed PCM images as tensors, and optionally, a name for each image.
             save_path (str, optional): If provided, the path to save the predicted gene expression values as an AnnData object. Defaults to None.
+            do_tqdm (bool, optional): Whether to display a progress bar during inference. Defaults to True.
 
         Returns:
             anndata.AnnData: An AnnData object containing the predicted gene expression values.
@@ -111,11 +112,16 @@ class Penne(pl.LightningModule):
         predicted_expression = []
         predicted_f_names = []
         with torch.no_grad():
-            for image, name in tqdm(loader):
-                image = image.to(self.model.device)
-                pred = self.model(image, if_convert=True).cpu().numpy() # (batch_size, num_genes)
+            for items in tqdm(loader, disable=not do_tqdm):
+                if isinstance(items, tuple) or isinstance(items, list):
+                    images, names = items
+                else:
+                    images = items
+                    names = [f"sample_{i}" for i in range(images.size(0))]
+                images = images.to(self.model.device)
+                pred = self.model(images, if_convert=True).cpu().numpy() # (batch_size, num_genes)
                 predicted_expression.append(pred)
-                predicted_f_names.extend(list(name))
+                predicted_f_names.extend(list(names))
         predicted_expression = np.concatenate(predicted_expression, axis=0) # (num_samples, num_genes)
         ad_exp = ad.AnnData(X=predicted_expression, 
                             obs={"image_name": predicted_f_names}, 
