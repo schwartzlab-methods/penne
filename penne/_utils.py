@@ -65,7 +65,7 @@ def pre_processing_phikon(model=None):
         return lambda batch: torch.stack([transform(x) for x in batch])
 
 
-def download_asset_from_github(asset_name: str, save_path: str = "~/.cache/penne/") -> None:
+def download_asset_from_github(asset_name: str, save_path: str) -> None:
     '''Download an asset from the penne GitHub repository.
 
     Args:

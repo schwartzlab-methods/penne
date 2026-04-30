@@ -43,7 +43,6 @@ def main():
         gene_names = args.gene_names
 
     # Initialize the SPAGHETTI model and the PENNE model
-    spaghetti_model = init_spaghetti(spaghetti_ckpt)
     penne = Penne(spaghetti_model_path=spaghetti_ckpt, penne_model_path=penne_ckpt, gene_names=gene_names)
 
     # Create the inference dataset and dataloader
