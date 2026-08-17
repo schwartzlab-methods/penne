@@ -1,7 +1,7 @@
 # PENNE - Phase-to-Expression Neural Network Estimator
 Implementation of PENNE, a method for inferring transcriptome from phase-contrast microscopy images.
 
-Read the [paper](www.schwartzlab.ca) and the [documentations](documentations.md)
+Read the [paper](https://www.biorxiv.org/content/10.64898/2026.08.07.743564v1) and the [documentations](documentations.md)
 
 ## Installing PENNE
 
