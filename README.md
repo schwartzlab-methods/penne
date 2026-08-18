@@ -46,19 +46,14 @@ You can also optionally use ```--penne_checkpoint```, ```--spaghetti_checkpoint`
 
 ## Inferences with Docker
 
-For a dependency-free and reproducible environment, the CLI inference tool of PENNE is available as a Docker image. To use it, ensure you have Docker installed, then run:
+For a dependency-free and reproducible environment, the CLI inference tool of PENNE is available as a Docker image. To use it, ensure you have Docker installed, then build the Docker image directly from the `dockerfile` in this repository before running inferences.
 
-### Option 1: Use the Pre-built Image from Docker Hub
-
-The official image is hosted on Docker Hub.
-
-1.  **Pull the latest image:**
+1.  **Build the image:**
     ```bash
-    docker pull yinnikun/penne:latest
+    docker build -t penne:latest .
     ```
 
 2.  **Run Inference:**
-
     To run inference, you need to mount a local directory into the container. This directory should contain your input images and the model checkpoint. The container will write the output images back to this same directory.
 
     Let's say your local data is organized as follows:
@@ -74,32 +69,16 @@ The official image is hosted on Docker Hub.
 
     Execute the following command:
     ```bash
-    docker run --rm -v "/path/to/your/data:/data" yinnikun/penne:latest \
-      --input /data/inputs \
-      --penne_checkpoint /data/penne.ckpt \
-      --spaghetti_checkpoint /data/penne.ckpt
-    ```
-    -   `--rm`: Automatically removes the container when it exits.
-    -   `-v "/path/to/your/data:/data"`: Mounts your local data directory into the `/data` directory inside the container. **Remember to use absolute paths.**
-
-### Option 2: Build the Image Locally
-
-You can also build the Docker image directly from the `dockerfile` in this repository.
-
-1.  **Build the image:**
-    ```bash
-    docker build -t penne:latest .
-    ```
-
-2.  **Run Inference:**
-    The `docker run` command is the same as above, just replace the image name:
-    ```bash
     docker run --rm -v "/path/to/your/data:/data" penne:latest \
       --input /data/inputs \
       --output /data/outputs \
       --penne_checkpoint /data/penne.ckpt \
       --spaghetti_checkpoint /data/penne.ckpt
     ```
+    -   `--rm`: Automatically removes the container when it exits.
+    -   `-v "/path/to/your/data:/data"`: Mounts your local data directory into the `/data` directory inside the container. **Remember to use absolute paths.**
+
+The model will save the inferred ```.h5ad``` files in the ```--output``` directory.
 
 ## Training your own model
 You can also train your own model to perform the inferences. See the [documentations](documentations.md) for the details on how to use the ```TrainPenne``` class.
